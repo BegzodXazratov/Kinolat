@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CineQuiz Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════
+   TOKENS
+══════════════════════════════ */
+:root{
+  --bg:#05060e; --panel:#0b0d1c; --panel2:#101322;
+  --gold:#f0c040; --gold2:#c8900a; --glow:rgba(240,192,64,.3);
+  --blue:#3fa9f5; --cyan:#00d9e8; --red:#ff3f5e; --green:#24d97a; --purple:#b06cff;
+  --text:#e8eaf6; --muted:#525878; --border:rgba(240,192,64,.15);
+  --ff-h:'Bebas Neue',sans-serif; --ff-s:'DM Serif Display',serif;
+  --ff-m:'JetBrains Mono',monospace; --ff-b:'Outfit',sans-serif;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;touch-action:manipulation}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--ff-b);min-height:100vh;overflow-x:hidden}
+
+/* grain */
+body::after{
+  content:'';position:fixed;inset:0;z-index:9000;pointer-events:none;opacity:.55;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='.045'/%3E%3C/svg%3E");
+  animation:grain .4s steps(1) infinite;
+}
+@keyframes grain{
+  0%{transform:translate(0,0)}10%{transform:translate(-1%,-2%)}20%{transform:translate(1%,1%)}
+  30%{transform:translate(-2%,0)}40%{transform:translate(2%,-1%)}50%{transform:translate(0,2%)}
+  60%{transform:translate(-1%,1%)}70%{transform:translate(1%,-2%)}80%{transform:translate(-2%,1%)}
+  90%{transform:translate(2%,0)}100%{transform:translate(0,0)}
+}
+
+/* blobs */
+.blob{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(90px);opacity:.09;animation:blobf 14s ease-in-out infinite alternate}
+.b1{width:600px;height:600px;background:var(--gold);top:-150px;left:-150px;animation-delay:0s}
+.b2{width:450px;height:450px;background:var(--blue);bottom:-100px;right:-100px;animation-delay:-7s}
+.b3{width:350px;height:350px;background:var(--purple);top:40%;left:45%;animation-delay:-3.5s}
+@keyframes blobf{from{transform:translate(0,0) scale(1)}to{transform:translate(50px,35px) scale(1.12)}}
+
+/* progress */
+.prog-rail{position:sticky;top:0;z-index:500;height:3px;background:rgba(255,255,255,.04)}
+.prog-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--gold2),var(--gold),var(--cyan));box-shadow:0 0 14px var(--gold);transition:width .7s cubic-bezier(.4,0,.2,1)}
+
+/* header */
+.hdr{
+  position:relative;z-index:100;background:#000;
+  border-bottom:3px solid var(--gold);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:66px;overflow:hidden;
+}
+.hdr::before,.hdr::after{
+  content:'';position:absolute;top:0;bottom:0;width:24px;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent 5px,#1a1a1a 5px,#1a1a1a 9px);
+  opacity:.7;
+}
+.hdr::before{left:0}.hdr::after{right:0}
+.logo{font-family:var(--ff-h);font-size:2.1rem;letter-spacing:.06em;color:var(--gold);text-shadow:0 0 40px var(--glow);display:flex;align-items:center;gap:10px;user-select:none}
+.logo em{font-style:normal;font-size:1.3rem;filter:drop-shadow(0 0 10px var(--gold))}
+.round-tag{font-family:var(--ff-m);font-size:.8rem;color:var(--muted);background:var(--panel);border:1px solid var(--border);padding:7px 16px;border-radius:30px;display:flex;align-items:center;gap:6px}
+.round-tag .curr{color:var(--gold);font-size:1.05rem;font-weight:700}
+
+/* layout */
+.wrap{position:relative;z-index:10;max-width:900px;margin:0 auto;padding:22px 14px 100px}
+
+/* info area */
+.info-area{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.intro-card{
+  background:var(--panel);border:1px solid var(--border);border-radius:12px;
+  padding:16px 28px 16px 50px;position:relative;overflow:hidden;
+  font-family:var(--ff-s);font-style:italic;font-size:1rem;color:#bfc3d9;min-height:56px;
+  display:flex;align-items:center;
+}
+.intro-card::before{
+  content:'"';position:absolute;left:12px;top:-6px;font-family:var(--ff-s);
+  font-size:4.5rem;color:rgba(240,192,64,.13);line-height:1;pointer-events:none;
+}
+.clue-card{
+  background:linear-gradient(135deg,rgba(63,169,245,.07),rgba(0,217,232,.04));
+  border:1px solid rgba(63,169,245,.25);border-left:4px solid var(--blue);
+  border-radius:12px;padding:13px 18px;display:flex;align-items:center;gap:14px;min-height:54px;
+  opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s;
+}
+.clue-card.vis{opacity:1;transform:translateY(0)}
+.ci{font-size:1.6rem;flex-shrink:0;line-height:1}
+.cm{font-family:var(--ff-m);font-size:.6rem;color:var(--blue);font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.cb{font-size:.95rem;font-weight:600;color:var(--text);margin-top:3px;line-height:1.4}
+
+/* scoreboard */
+.scoreboard{display:flex;align-items:center;justify-content:center;gap:0;margin:16px 0 12px}
+.scol{text-align:center;padding:0 30px}
+.slbl{font-family:var(--ff-m);font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.15em}
+.sval{
+  font-family:var(--ff-h);font-size:3.2rem;line-height:1;
+  background:linear-gradient(160deg,var(--gold),var(--gold2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 12px var(--glow));transition:transform .15s;
+}
+.sval.bump{animation:sbump .25s ease}
+@keyframes sbump{50%{transform:scale(1.22)}}
+.ssep{width:1px;height:50px;background:linear-gradient(to bottom,transparent,var(--border),transparent)}
+
+/* title */
+.title-sec{margin:8px 0 18px}
+.title-lbl{
+  display:flex;align-items:center;gap:8px;justify-content:center;
+  font-family:var(--ff-m);font-size:.6rem;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.15em;margin-bottom:10px;
+}
+.title-lbl::before,.title-lbl::after{content:'';flex:1;max-width:70px;height:1px;background:var(--border)}
+.title-row{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:5px}
+.lbox{
+  width:36px;height:46px;background:var(--panel2);
+  border:1px solid var(--muted);border-bottom:3px solid var(--gold);
+  border-radius:6px 6px 3px 3px;text-align:center;
+  font-family:var(--ff-h);font-size:1.65rem;color:var(--gold);
+  outline:none;transition:all .18s;caret-color:var(--gold);
+}
+.lbox:focus{border-color:var(--blue);border-bottom-color:var(--blue);background:rgba(63,169,245,.09);box-shadow:0 0 0 2px rgba(63,169,245,.18)}
+.lbox.ok{border-color:var(--green)!important;border-bottom-color:var(--green)!important;background:rgba(36,217,122,.1)!important;color:var(--green)!important;animation:pop .28s ease}
+.lbox.bad{border-color:var(--red)!important;border-bottom-color:var(--red)!important;background:rgba(255,63,94,.09)!important;color:var(--red)!important;animation:jolt .22s ease}
+@keyframes pop{50%{transform:scale(1.18) translateY(-3px)}}
+@keyframes jolt{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.wgap{width:14px;height:46px;flex-shrink:0}
+.sch{width:auto;min-width:10px;height:46px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:1.2rem;flex-shrink:0;padding:0 2px}
+
+/* cards */
+.cards-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.cw{perspective:1000px}
+.ci2{
+  position:relative;padding-bottom:138%;
+  transition:transform .55s cubic-bezier(.4,0,.2,1);
+  transform-style:preserve-3d;cursor:pointer;
+}
+.cw.flip .ci2{transform:rotateY(180deg)}
+.cw.used .ci2{transform:rotateY(180deg);cursor:default}
+.cface{
+  position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:8px;text-align:center;
+}
+.fback{
+  background:var(--panel2);border:1px solid var(--border);
+  transition:border-color .2s,box-shadow .2s;
+}
+.cw:not(.used):not(.flip):hover .fback{
+  border-color:rgba(240,192,64,.45);
+  box-shadow:0 0 22px rgba(240,192,64,.12),inset 0 0 18px rgba(240,192,64,.03);
+}
+.ffront{
+  background:linear-gradient(160deg,#0c1124,#101830);
+  border:1px solid rgba(240,192,64,.28);
+  transform:rotateY(180deg);
+}
+.cicon{font-size:1.7rem;line-height:1}
+.cname{font-family:var(--ff-m);font-size:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:5px}
+.cnum{position:absolute;top:5px;right:7px;font-family:var(--ff-m);font-size:.5rem;color:rgba(255,255,255,.12)}
+.ccost{position:absolute;bottom:5px;font-family:var(--ff-m);font-size:.55rem;color:var(--gold2)}
+.ftype{font-family:var(--ff-m);font-size:.55rem;color:var(--gold);font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+.ftext{font-size:.68rem;color:var(--text);line-height:1.4}
+
+/* skip */
+.btn-skip{
+  display:block;margin:28px auto 10px;background:transparent;
+  border:2px solid rgba(255,63,94,.4);color:rgba(255,63,94,.7);
+  padding:12px 36px;font-family:var(--ff-h);font-size:1.15rem;letter-spacing:.08em;
+  border-radius:6px;cursor:pointer;transition:all .2s;
+}
+.btn-skip:hover{border-color:var(--red);color:var(--red);box-shadow:0 0 18px rgba(255,63,94,.15)}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:8000;background:rgba(0,0,0,.92);display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(6px)}
+.overlay.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:36px 30px;text-align:center;width:100%;max-width:560px;position:relative;overflow:hidden}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--gold2),var(--gold),var(--cyan))}
+.mtitle{font-family:var(--ff-h);font-size:3.5rem;line-height:1}
+.mfilm{color:var(--gold);font-family:var(--ff-s);font-size:1.6rem;font-style:italic;margin:12px 0 6px}
+.mscore{font-family:var(--ff-m);font-size:.85rem;color:var(--muted);margin-bottom:22px}
+.btn-g{
+  background:linear-gradient(135deg,var(--gold),var(--gold2));color:#000;
+  padding:14px 42px;border:none;border-radius:8px;
+  font-family:var(--ff-h);font-size:1.4rem;letter-spacing:.06em;cursor:pointer;
+  box-shadow:0 0 24px rgba(240,192,64,.3);transition:transform .15s,box-shadow .15s;
+}
+.btn-g:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(240,192,64,.4)}
+.fbig{
+  font-family:var(--ff-h);font-size:5rem;line-height:1;
+  background:linear-gradient(135deg,var(--gold),var(--cyan));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 20px var(--glow));margin:10px 0 4px;
+}
+.frat{font-family:var(--ff-s);font-style:italic;color:var(--muted);font-size:1rem;margin-bottom:20px}
+.sscroll{max-height:240px;overflow-y:auto;margin-bottom:22px}
+.sscroll::-webkit-scrollbar{width:3px}
+.sscroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.stbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.stbl th{font-family:var(--ff-m);font-size:.6rem;color:var(--gold);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--border);padding:8px 10px;text-align:left}
+.stbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+.stbl tr:last-child td{border-bottom:none}
+.tds{font-family:var(--ff-m);font-weight:700;color:var(--gold)}
+
+/* loader */
+#loader{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.llogo{font-family:var(--ff-h);font-size:3rem;color:var(--gold);text-shadow:0 0 40px var(--glow);animation:lp 1.5s ease-in-out infinite}
+@keyframes lp{50%{opacity:.4}}
+.ldots span{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin:0 3px;animation:db .8s ease-in-out infinite}
+.ldots span:nth-child(2){animation-delay:.15s}
+.ldots span:nth-child(3){animation-delay:.3s}
+@keyframes db{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
+.lerr{color:var(--red);font-size:.9rem;font-family:var(--ff-m);display:none;text-align:center;padding:0 20px}
+
+/* responsive */
+@media(max-width:600px){.cards-grid{grid-template-columns:repeat(3,1fr)}.lbox{width:30px;height:42px;font-size:1.45rem}.sval{font-size:2.6rem}.scol{padding:0 18px}}
+@media(max-width:380px){.lbox{width:26px;height:38px;font-size:1.25rem}}
+
+#yt-player{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px}
+</style>
+</head>
+<body>
+
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+<div id="yt-player"></div>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="llogo">🎬 CINEQUIZ</div>
+  <div class="ldots"><span></span><span></span><span></span></div>
+  <div class="lerr" id="loaderErr">⚠ films.json yuklanmadi.<br>Faylni HTML bilan bir papkaga qo'ying.</div>
+</div>
+
+<div class="prog-rail"><div class="prog-fill" id="prog"></div></div>
+
+<header class="hdr">
+  <div class="logo"><em>🎬</em> CINEQUIZ PRO</div>
+  <div class="round-tag">RAUND <span class="curr" id="currRound">1</span> / 15</div>
+</header>
+
+<div class="wrap" id="gameArea" style="display:none">
+
+  <div class="info-area">
+    <div class="intro-card" id="introText"></div>
+    <div class="clue-card" id="clueCard">
+      <div class="ci" id="clueIcon">🎬</div>
+      <div>
+        <div class="cm" id="clueMeta">—</div>
+        <div class="cb" id="clueBody">Kino haqida ma'lumot olish uchun kartalardan birini bosing!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="scol">
+      <div class="slbl">Bu raund</div>
+      <div class="sval" id="roundScore">15</div>
+    </div>
+    <div class="ssep"></div>
+    <div class="scol">
+      <div class="slbl">Jami ball</div>
+      <div class="sval" id="totalScore">0</div>
+    </div>
+  </div>
+
+  <div class="title-sec">
+    <div class="title-lbl">Film nomini toping</div>
+    <div class="title-row" id="titleRow"></div>
+  </div>
+
+  <div class="cards-grid" id="cardsGrid"></div>
+
+  <button class="btn-skip" onclick="skipRound()">❌ &nbsp;BILMAYMAN — KEYINGISI</button>
+</div>
+
+<!-- Round result -->
+<div class="overlay" id="resultModal">
+  <div class="modal">
+    <div class="mtitle" id="rTitle"></div>
+    <div class="mfilm"  id="rFilm"></div>
+    <div class="mscore" id="rScore"></div>
+    <button class="btn-g" onclick="nextRound()">KEYINGI FILM &nbsp;→</button>
+  </div>
+</div>
+
+<!-- Final -->
+<div class="overlay" id="finalModal">
+  <div class="modal">
+    <div style="font-family:var(--ff-h);font-size:2rem;color:var(--gold)">O'YIN YAKUNLANDI!</div>
+    <div class="fbig" id="fTotal">0</div>
+    <div class="frat" id="fRating"></div>
+    <div class="sscroll">
+      <table class="stbl">
+        <thead><tr><th>#</th><th>Film</th><th>Ball</th></tr></thead>
+        <tbody id="statsTbody"></tbody>
+      </table>
+    </div>
+    <button class="btn-g" onclick="location.reload()">🔄 &nbsp;QAYTADAN BOSHLASH</button>
+  </div>
+</div>
+
+<script>
+/* ────────────────────────────────
+   CONFIG
+──────────────────────────────── */
+const ROUNDS  = 15;
+const TRACKS  = ["I0cZukTFXNw","nj4mXWKgKXc","8kooIgKESYE","X-jdl9hcCeg"];
+const ICONS   = {
+  YIL:"📅",REJISSYOR:"🎬",AKTYOR:"🎭",JANR:"🌀",SAHNA:"🎞️",IQTIBOS:"💬",
+  MUSIQA:"🎵",MUKOFOT:"🏆",DETAL:"🧩",HARF:"🔤",FAKT:"ℹ️",MAVZU:"💡",
+  PRODYUSER:"🎥",SSENARIY:"📝",DAVLAT:"🌍",INFO:"ℹ️"
+};
+const RATINGS = [
+  [210,"Siz Holywoodda Tarantino darajasidasiz! 🏆"],
+  [165,"Haqiqiy kinoman ekansiz! 🎬"],
+  [120,"Kino bo'yicha zo'r bilimsiz! 🥇"],
+  [75,"Yaxshi natija! Ko'proq kino tomosha qiling 🥈"],
+  [30,"Yana urinib ko'ring! 💪"],
+  [0,"Kino ko'rishni boshlash kerak 😅"]
+];
+
+/* ────────────────────────────────
+   STATE
+──────────────────────────────── */
+let playlist=[], idx=0, movie=null;
+let roundScore=ROUNDS, totalScore=0;
+let flipped=new Set(), revealed=new Set();
+let gameLog=[], done=false;
+
+/* ────────────────────────────────
+   YOUTUBE
+──────────────────────────────── */
+const s=document.createElement('script');
+s.src="https://www.youtube.com/iframe_api";
+document.head.appendChild(s);
+function onYouTubeIframeAPIReady(){
+  const v=TRACKS[Math.floor(Math.random()*TRACKS.length)];
+  new YT.Player('yt-player',{videoId:v,playerVars:{autoplay:1,loop:1,playlist:v,controls:0},
+    events:{onReady:e=>e.target.setVolume(12)}});
+}
+
+/* ────────────────────────────────
+   INIT
+──────────────────────────────── */
+async function init(){
+  try{
+    const res=await fetch('films.json');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data=await res.json();
+    playlist=data.sort(()=>Math.random()-.5).slice(0,ROUNDS);
+    document.getElementById('loader').style.display='none';
+    document.getElementById('gameArea').style.display='block';
+    startRound();
+  }catch(e){
+    document.getElementById('loaderErr').style.display='block';
+    document.querySelector('.llogo').textContent='⚠️';
+    console.error('films.json xato:',e);
+  }
+}
+
+/* ────────────────────────────────
+   ROUND
+──────────────────────────────── */
+function startRound(){
+  movie=playlist[idx];
+  roundScore=ROUNDS;
+  flipped.clear(); revealed.clear(); done=false;
+  document.getElementById('currRound').textContent=idx+1;
+  document.getElementById('roundScore').textContent=roundScore;
+  document.getElementById('introText').textContent=movie.intro;
+  document.getElementById('prog').style.width=(idx/ROUNDS*100)+'%';
+  const cc=document.getElementById('clueCard');
+  cc.classList.remove('vis');
+  document.getElementById('clueBody').textContent="Kino haqida ma'lumot olish uchun kartalardan birini bosing!";
+  document.getElementById('clueMeta').textContent='—';
+  document.getElementById('clueIcon').textContent='🎬';
+  renderCards(); renderTitle();
+}
+
+/* ────────────────────────────────
+   CARDS
+──────────────────────────────── */
+function renderCards(){
+  const g=document.getElementById('cardsGrid');
+  g.innerHTML='';
+  movie.facts.forEach((fact,i)=>{
+    const type=getType(fact), icon=ICONS[type]||ICONS.INFO;
+    const d=document.createElement('div');
+    d.className='cw'; d.id='card-'+i;
+    d.innerHTML=`
+      <div class="ci2">
+        <div class="cface fback" onclick="flipCard(${i})">
+          <div class="cnum">${i+1}</div>
+          <div class="cicon">${icon}</div>
+          <div class="cname">${type}</div>
+          <div class="ccost">−1 ball</div>
+        </div>
+        <div class="cface ffront" id="face-${i}">
+          <div class="ftype">${type}</div>
+          <div class="ftext" id="ft-${i}"></div>
+        </div>
+      </div>`;
+    g.appendChild(d);
+  });
+}
+
+/* ────────────────────────────────
+   TITLE GRID
+──────────────────────────────── */
+function renderTitle(){
+  const row=document.getElementById('titleRow');
+  row.innerHTML='';
+  const tc=cleanTitle(movie.title);
+  [...tc].forEach((ch,i)=>{
+    if(ch===' '){
+      const g=document.createElement('div');
+      g.className='wgap'; row.appendChild(g);
+    } else if(isInput(ch)){
+      const inp=document.createElement('input');
+      inp.className='lbox'; inp.maxLength=1; inp.id='inp-'+i;
+      inp.setAttribute('inputmode','text');
+      inp.setAttribute('autocomplete','off');
+      inp.setAttribute('autocorrect','off');
+      inp.setAttribute('autocapitalize','characters');
+      if(revealed.has(i)){inp.value=ch;inp.disabled=true;inp.classList.add('ok')}
+      inp.addEventListener('input',e=>onInput(e,i,ch));
+      inp.addEventListener('keydown',e=>onKeydown(e,i));
+      row.appendChild(inp);
+    } else {
+      const sym=document.createElement('div');
+      sym.className='sch'; sym.textContent=ch;
+      row.appendChild(sym);
+    }
+  });
+}
+
+function onInput(e,pos,exp){
+  const v=e.target.value.toUpperCase();
+  e.target.value=v;
+  e.target.classList.remove('ok','bad');
+  if(!v) return;
+  if(v===exp){e.target.classList.add('ok'); focusNext(pos);}
+  else e.target.classList.add('bad');
+  checkWin();
+}
+function onKeydown(e,pos){
+  if(e.key==='Backspace'){e.target.classList.remove('ok','bad');if(!e.target.value)focusPrev(pos)}
+}
+function focusNext(from){
+  const tc=cleanTitle(movie.title);
+  for(let i=from+1;i<tc.length;i++){const el=document.getElementById('inp-'+i);if(el&&!el.disabled){el.focus();return}}
+}
+function focusPrev(from){
+  for(let i=from-1;i>=0;i--){const el=document.getElementById('inp-'+i);if(el&&!el.disabled){el.focus();return}}
+}
+
+/* ────────────────────────────────
+   FLIP / CLUE
+──────────────────────────────── */
+function flipCard(i){
+  if(flipped.has(i)||done||roundScore<=1) return;
+  flipped.add(i);
+  document.getElementById('card-'+i).classList.add('flip','used');
+  const fact=movie.facts[i], type=getType(fact), text=getText(fact);
+  document.getElementById('ft-'+i).textContent=text;
+  document.getElementById('clueIcon').textContent=ICONS[type]||ICONS.INFO;
+  document.getElementById('clueMeta').textContent=type;
+  document.getElementById('clueBody').textContent=text;
+  const cc=document.getElementById('clueCard');
+  cc.classList.remove('vis');
+  requestAnimationFrame(()=>cc.classList.add('vis'));
+  if(type==='HARF') doHarf(fact);
+  roundScore--;
+  const rv=document.getElementById('roundScore');
+  rv.textContent=roundScore;
+  rv.classList.remove('bump');
+  requestAnimationFrame(()=>rv.classList.add('bump'));
+  checkWin();
+}
+
+/* ────────────────────────────────
+   HARF REVEAL
+──────────────────────────────── */
+function doHarf(rawFact){
+  const tc=cleanTitle(movie.title);
+  let pos=parseHarfPos(rawFact,tc);
+
+  /* validate & try fallback */
+  if(pos<0||pos>=tc.length||!isInput(tc[pos])||isAlreadyCorrect(pos,tc[pos])){
+    const pool=[];
+    [...tc].forEach((ch,i)=>{
+      if(!isInput(ch)) return;
+      if(!isAlreadyCorrect(i,ch)) pool.push(i);
+    });
+    if(!pool.length) return;
+    pos=pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  revealed.add(pos);
+  const inp=document.getElementById('inp-'+pos);
+  if(!inp) return;
+  inp.value=tc[pos]; inp.disabled=true;
+  inp.classList.remove('bad'); inp.classList.add('ok');
+}
+
+function isAlreadyCorrect(pos,ch){
+  const el=document.getElementById('inp-'+pos);
+  return el&&(el.disabled||el.value.toUpperCase()===ch);
+}
+
+/**
+ * Parse HARF position from fact string.
+ *
+ * Handles all observed formats in films.json:
+ *   "[HARF] 1-harf: T (reveal: 0)"       → 0
+ *   "[HARF] 5-harf: S (reveal: 4)"        → 4
+ *   "[HARF] Oxirgi harf: G (reveal: 10)"  → 10
+ *   "[HARF] 1-harf: N."                   → index of 1st input char
+ *   "[HARF] Oxirgi harf: U."              → index of last input char
+ */
+function parseHarfPos(raw,tc){
+  // explicit (reveal: N)
+  const rm=raw.match(/\(reveal:\s*(\d+)\)/i);
+  if(rm) return parseInt(rm[1]);
+
+  // N-harf (1-based → index)
+  const nm=raw.match(/(\d+)-harf/i);
+  if(nm){
+    const n=parseInt(nm[1]);
+    let cnt=0;
+    for(let i=0;i<tc.length;i++){
+      if(isInput(tc[i])){cnt++;if(cnt===n)return i}
+    }
+  }
+
+  // Oxirgi harf → last input char
+  if(/oxirgi/i.test(raw)){
+    for(let i=tc.length-1;i>=0;i--){if(isInput(tc[i]))return i}
+  }
+
+  return -1;
+}
+
+/* ────────────────────────────────
+   WIN CHECK
+──────────────────────────────── */
+function checkWin(){
+  if(done) return;
+  const tc=cleanTitle(movie.title);
+  const ok=[...tc].every((ch,i)=>{
+    if(!isInput(ch)) return true;
+    const el=document.getElementById('inp-'+i);
+    return el&&el.value.toUpperCase()===ch;
+  });
+  if(ok) setTimeout(()=>endRound(true),320);
+}
+
+/* ────────────────────────────────
+   END ROUND
+──────────────────────────────── */
+function skipRound(){if(!done)endRound(false)}
+
+function endRound(win){
+  if(done) return; done=true;
+  const score=win?roundScore:0;
+  totalScore+=score;
+  gameLog.push({title:movie.title,score,win});
+  const tv=document.getElementById('totalScore');
+  tv.textContent=totalScore;
+  tv.classList.remove('bump');
+  requestAnimationFrame(()=>tv.classList.add('bump'));
+  document.getElementById('rTitle').textContent=win?'✅ TO\'G\'RI!':'❌ AFSUS!';
+  document.getElementById('rTitle').style.color=win?'var(--green)':'var(--red)';
+  document.getElementById('rFilm').textContent=movie.title;
+  document.getElementById('rScore').textContent=win
+    ?`+${score} ball qo'shildi`
+    :`Javob: ${cleanTitle(movie.title)}`;
+  document.getElementById('resultModal').classList.add('show');
+}
+
+function nextRound(){
+  document.getElementById('resultModal').classList.remove('show');
+  idx++;
+  if(idx<ROUNDS){document.getElementById('prog').style.width=(idx/ROUNDS*100)+'%';startRound();}
+  else showFinal();
+}
+
+/* ────────────────────────────────
+   FINAL
+──────────────────────────────── */
+function showFinal(){
+  document.getElementById('prog').style.width='100%';
+  document.getElementById('fTotal').textContent=totalScore;
+  const r=RATINGS.find(x=>totalScore>=x[0]);
+  document.getElementById('fRating').textContent=r?r[1]:'';
+  const tb=document.getElementById('statsTbody');
+  tb.innerHTML='';
+  gameLog.forEach((item,n)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td style="color:var(--muted);font-family:var(--ff-m)">${n+1}</td><td style="font-size:.8rem">${item.title}</td><td class="tds">${item.score}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('finalModal').classList.add('show');
+}
+
+/* ────────────────────────────────
+   UTILS
+──────────────────────────────── */
+const cleanTitle = raw => raw.replace(/\s*\(.*\)\s*$/, '').toUpperCase().trim();
+const isInput    = ch  => /[A-Z0-9]/.test(ch);
+const getType    = f   => { const m=f.match(/^\[([^\]]+)\]/); return m?m[1].toUpperCase().trim():'INFO'; };
+const getText    = f   => f.replace(/^\[[^\]]+\]\s*/,'').trim();
+
+/* ────────────────────────────────
+   START
+──────────────────────────────── */
+init();
+</script>
+</body>
+</html>
